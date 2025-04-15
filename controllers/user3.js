@@ -2,24 +2,35 @@ const userModel = require("../model/user")
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 const Blacklisted = require("../model/tokenMod")
+const generateRandomString = require("../utils/genRandomString")
+const sendVerificationEmail = require("../services/nodemailer/sendverificationEmail")
 
+//     http://localhost:5173/verify/:token
 
-async function addUser(req, res) {
+async function signup(req, res) {
 
 try {
     const {password} = req.body
     const Salt = await bcrypt.genSalt(10)
     const hashed = await bcrypt.hash(password, Salt)
-  
-    const user = await userModel.create({...req.body, password: hashed})
+    // generate verification token
+    const verificationToken = generateRandomString(10)
+    // generate verification exp
+    const verificationExp = Date.now() + 60000 // 1 minute
+
+    const user = await userModel.create({...req.body, password: hashed, verificationToken, verificationExp})
+
     if (!user) {
         res.status(400).json({
-           status: "error",
-           message: "user not created",
-           user
+            status: "error",
+            message: "user not created",
+            user
         })
+        
+    } else {
+           // send verification email
+           sendVerificationEmail(user.email, verificationToken, user.name)
            
-       } else {
            res.status(201).json({
                status: "Success",
                message: "user created successfully",
@@ -35,6 +46,15 @@ try {
 
 
     
+}
+
+const verifyEmail = async (req, res)=>{
+    const {token} = req.query
+    const user = await userModel.findOne({token})
+
+    res.json({
+        
+    })
 }
 
 async function signIn(req, res) {
@@ -182,7 +202,7 @@ const getAllUsersByIdAndDelete = async (req, res) => {
 module.exports = {
     getAllUsers,
     getAllUsersById,
-    addUser,
+    signup,
     getAllUsersByIdAndDelete,
     updateUser,
     signIn,
