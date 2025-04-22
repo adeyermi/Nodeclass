@@ -7,7 +7,7 @@ const sendVerificationEmail = require("../services/nodemailer/sendverificationEm
 
 //     http://localhost:5173/verify/:token
 
-async function signup(req, res) {
+async function signup(req, res, next) {
 
 try {
     const {password} = req.body
@@ -40,24 +40,65 @@ try {
        }
     
 } catch (error) {
-    console.log(error);
-    
+    // console.log(error);
+    next(error)
 }
 
 
     
 }
 
-const verifyEmail = async (req, res)=>{
-    const {token} = req.query
-    const user = await userModel.findOne({token})
 
-    res.json({
-        
-    })
-}
 
-async function signIn(req, res) {
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({
+        status: "error",
+        message: "Verification token is missing",
+      });
+    }
+
+    
+    const user = await userModel.findOne({ verificationToken: token });
+
+    if (!user) {
+      return res.status(404).json({
+        status: "error",
+        message: "Invalid or expired verification token",
+      });
+    }
+
+    
+    if (Date.now() > parseInt(user.verificationExp)) {
+      return res.status(400).json({
+        status: "error",
+        message: "Verification token has expired",
+      });
+    }
+
+    await userModel.findByIdAndUpdate(user._id, {verificationExp: null, verificationToken: null, isVerified: true})
+
+    return res.status(200).json({
+      status: "success",
+      message: "Email verified successfully!",
+    });
+
+  } catch (error) {
+    console.error( error);
+    return res.status(500).json({
+      status: "error",
+      message: "Server error while verifying email",
+    });
+  }
+};
+
+
+
+
+async function signIn(req, res, next) {
     try {
   const {email, password} = req.body
 
@@ -82,7 +123,7 @@ async function signIn(req, res) {
 
 //   twt
 console.log(process.env.jwt_secret)
-const token = jwt.sign({email: user.email, id: user._id}, process.env.jwt_secret, {expiresIn: "5d"})
+const token = jwt.sign({email: user.email, id: user._id}, process.env.jwt_secret, {expiresIn: "1m"})
 res.status(200).json({
     status: "success",
     message: "User sucessfully signin",
@@ -139,8 +180,8 @@ const getAllUsers = async (req, res) => {
 }
 
 
-const getAllUsersById = async (req, res) => {
-    const Add = await userModel.findById(req.params.id)
+const getUserById = async (req, res) => {
+    const Add = await userModel.findById("90786")
     if (!Add) {
            res.status(400).json({
             status: "error",
@@ -190,7 +231,7 @@ const updateUser = async (req, res) => {
 
 
 
-const getAllUsersByIdAndDelete = async (req, res) => {
+const getUserByIdAndDelete = async (req, res) => {
     const {id} = req.params
    await userModel.findByIdAndDelete(id)
     res.status(200).json({
@@ -201,10 +242,11 @@ const getAllUsersByIdAndDelete = async (req, res) => {
 
 module.exports = {
     getAllUsers,
-    getAllUsersById,
+    getUserById,
     signup,
-    getAllUsersByIdAndDelete,
+    getUserByIdAndDelete,
     updateUser,
     signIn,
-    logOut
+    logOut,
+    verifyEmail
 }
