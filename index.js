@@ -1,4 +1,5 @@
 const express = require("express");
+
 const app = express();
 const cors = require("cors")
 const  connectDB = require('./config/connectToDB')
@@ -16,7 +17,7 @@ const errorHandler = require("./middlewares/errorHander")
 
 app.use(express.json());
 app.use(cors())
-const port = 4300;
+const port = 4003;
 
 app.listen(port, () => {
   console.log("Listening to the host");

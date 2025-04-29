@@ -102,7 +102,7 @@ async function signIn(req, res, next) {
     try {
   const {email, password} = req.body
 
-  const user = await userModel.findOne({email})
+  const user = await userModel.findOne({id})
   if(!user){
     res.status(404).json({
         status: "error",
@@ -122,8 +122,8 @@ async function signIn(req, res, next) {
   }
 
 //   twt
-console.log(process.env.jwt_secret)
-const token = jwt.sign({email: user.email, id: user._id}, process.env.jwt_secret, {expiresIn: "1m"})
+console.log("JWT_SECRET is:", process.env.JWT_SECRET);
+const token = jwt.sign({ email: user.email, id: user._id }, process.env.JWT_SECRET, { expiresIn: "1m" });
 res.status(200).json({
     status: "success",
     message: "User sucessfully signin",
@@ -181,7 +181,7 @@ const getAllUsers = async (req, res) => {
 
 
 const getUserById = async (req, res) => {
-    const Add = await userModel.findById("90786")
+    const Add = await userModel.findByEmail("Ade@gmail.com")
     if (!Add) {
            res.status(400).json({
             status: "error",

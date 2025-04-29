@@ -1,36 +1,44 @@
-const handleDuplicateError = (error)=>{
-    const errorKey = Object.keys(error.keyValue)[0]
-    const errorVal = Object.values(error.keyValue)[0]
-    const errorMessage = new Error(`${errorKey} of ${errorVal} already exists.`)
-    const statusCode = 400
-    return {
-        statusCode,
-        errorMessage: errorMessage.message
+const handleDuplicateError = (error) => {
+    const errorKey = Object.keys(error.keyValue)[0];
+    const errorVal = Object.values(error.keyValue)[0];
+    const errorMessage = new Error(`${errorKey} of ${errorVal} already exists.`);
+    const statusCode = 400;
+    return { statusCode, errorMessage: errorMessage.message };
+};
+
+const errorHandler = (err, req, res, next) => {
+    console.log("Error caught:", err);
+
+    // Duplicate key error
+    if (err.code === 11000) {
+        const error = handleDuplicateError(err);
+        return res.status(error.statusCode).json({ message: error.errorMessage });
     }
-}
 
-const errorHandler = (err, req, res, next)=>{
-    console.log(err);
-    
-    // duplicate error
-    if(err.code === 11000){
-        const error = handleDuplicateError(err)
-        res.status(error.statusCode).json({
-            message: error.errorMessage
-        })
-    } 
-    // validation error
-    else if(err.name === "ValidationError"){
-
-    } else if(err.name === "CastError"){
-
+    // Validation error
+    if (err.name === "ValidationError") {
+        return res.status(400).json({ message: err.message });
     }
-     else{
-        res.status(500).json({
-            message: "An error occurred!"
-        })
-    }
-    
-}
 
-module.exports = errorHandler
+    // Cast error 
+    if (err.name === "CastError") {
+        return res.status(400).json({ message: `invalid ${err.path}: ${err.value}` });
+    }
+
+    // Invalid token
+    if (err.name === "JsonWebTokenError") {
+        return res.status(401).json({ message: "Invalid token" });
+    }
+
+    //  Expired token
+    if (err.name === "TokenExpiredError") {
+        return res.status(401).json({ message: "Token has expired" });
+    }
+
+
+    res.status(err.statusCode || 500).json({
+        message: err.message || "An unknown error occurred.",
+    });
+};
+
+module.exports = errorHandler;
