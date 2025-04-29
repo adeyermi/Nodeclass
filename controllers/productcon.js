@@ -2,9 +2,15 @@ const productModel = require("../model/productmod");
 
 
 async function addProduct(req, res) {
-    console.log(req.user)
+
+    if(!req.file){
+        return res.status(400).json({
+            message:"no image"
+        })
+    }
+   const image = req.file.path
     try {
-        const product = await productModel.create(req.body)
+        const product = await productModel.create({...req.body, productImage: image})
 
         if (!product) {
             res.status(400).json({
